@@ -1,0 +1,118 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper, top=1cm, bottom=1cm, left=1cm, right=1cm]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\setlist[itemize]{leftmargin=1.2em, label=--, topsep=0pt, itemsep=0.05em}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{Simon-Hans Edasi}} \\[6pt]
+    simonhansedasi@gmail.com \hfill \textbar \hfill
+    simonhansedasi.github.io \hfill \textbar \hfill
+    linkedin.com/in/simon-hans-edasi
+\end{center}
+
+\section*{Summary}
+Integration-focused technologist with 5+ years bridging operational workflows and technical systems
+in financial and data-intensive environments. Experienced in analyzing manual processes, designing
+automation solutions, and coordinating implementation across functional and technical teams. Builds
+repeatable, well-documented data pipelines and integration architectures with an emphasis on
+governance, auditability, and operational reliability.
+
+\section*{Skills}
+\begin{itemize}
+  \item \textbf{Integration \& Automation:} ERP integration (Microsoft Great Plains, SmartConnect),
+        workflow analysis, process automation, data transformation pipelines, ETL design
+  \item \textbf{Data \& Reporting:} Excel (advanced), Python, SQL, SQLite, pandas, data modeling,
+        financial data prep, repeatable reporting workflows
+  \item \textbf{Architecture \& Governance:} API design, system integration testing, audit logging,
+        policy enforcement, cost governance, multi-system data routing, documentation
+  \item \textbf{Infrastructure \& Ops:} Flask, nginx, Gunicorn, systemd, Raspberry Pi, DigitalOcean,
+        Tailscale VPN, Linux, shell scripting
+  \item \textbf{Platforms \& APIs:} Anthropic API, OpenAI API, Twilio, USAJOBS, RapidAPI, Census API,
+        Google Earth Engine, Google Calendar API
+\end{itemize}
+
+\section*{Work Experience}
+
+\textbf{AR Specialist} \hfill \textit{RANDY's} \hfill 2025
+\begin{itemize}
+  \item Served as functional architect for ERP integration workflows -- analyzed manual AR processes,
+        identified automation opportunities, and designed solutions implemented via SmartConnect
+        and Microsoft Great Plains.
+  \item Led user acceptance testing for integration builds; diagnosed data flow failures and
+        coordinated fixes between business operations and the ERP implementation specialist.
+  \item Digitized records management workflows, eliminating paper-based processes and establishing
+        repeatable, auditable data handling procedures.
+  \item Authored shell scripts to automate file organization and records maintenance, reducing
+        recurring manual effort across the AR team.
+  \item Prepared and transformed financial data in Excel for reporting and reconciliation workflows,
+        ensuring accuracy and consistency across billing cycles.
+\end{itemize}
+
+\vspace{0.4em}
+\textbf{NCO} \hfill \textit{U.S. Air Force} \hfill 2008--2014
+\begin{itemize}
+  \item Led mandatory training for unit personnel under sensitive, high-stakes conditions across
+        mixed ranks and diverse audiences; developed facilitation and structured communication skills
+        applicable to cross-functional technical collaboration.
+\end{itemize}
+
+\section*{Selected Projects}
+
+\textbf{ai\_glue -- LLM Audit \& Governance Layer} \hfill \textit{Python, Flask, SQLite}
+\begin{itemize}
+  \item Built a drop-in observability and governance proxy for Anthropic and OpenAI APIs; logs every
+        AI call with token counts, cost, latency, and project labels across 3 deployed instances.
+  \item Implements live-reloadable governance rules: model allowlists, cost caps, rate limits, PII
+        detection, and per-team API key routing -- zero restart required on rule changes.
+  \item Parent-child multi-instance aggregation enables org-wide cost visibility; JSONL export
+        supports fine-tuning pipelines; 27-test mock suite requires no live API keys.
+\end{itemize}
+
+\vspace{0.3em}
+\textbf{RippleForge -- Production SaaS (rippleforge.gg)} \hfill \textit{Python, Flask, SQLite, nginx}
+\begin{itemize}
+  \item Multi-tenant web application with live paying users; deployed on DigitalOcean behind nginx
+        and Gunicorn with Let's Encrypt SSL; full audit trail via ai\_glue integration.
+  \item Two-step deploy pipeline (pytest suite + rsync + deploy script) enforces test coverage
+        before every production push; operational runbooks maintained for all integrations.
+\end{itemize}
+
+\vspace{0.3em}
+\textbf{rejection\_matrix -- Integration Pipeline \& Tracker} \hfill \textit{Python, Flask, SQLite}
+\begin{itemize}
+  \item Aggregates job listings across 5 board APIs (Remotive, WWR, JSearch, USAJOBS, Ashby) with
+        board-specific query logic, salary normalization, and deduplication.
+  \item Append-only audit log per record; SSE-streaming Flask UI; daily cron pipeline with ntfy.sh
+        alerting -- demonstrates full integration lifecycle from ingestion to governance.
+\end{itemize}
+
+\vspace{0.3em}
+\textbf{snotrac -- Transit Accessibility \& Equity Analysis} \hfill \textit{Python, geopandas, pandas}
+\begin{itemize}
+  \item Fused GTFS transit feeds, ACS demographic layers, and OSM road networks into a
+        frequency-weighted accessibility model covering all of Snohomish County.
+  \item Designed a composite Gap Score (vulnerability index x inverse log-accessibility) to
+        surface underserved populations; outputs delivered as interactive maps and a policy
+        brief to regional agencies.
+  \item Multi-source pipeline with automated data acquisition (Census API, GTFS auto-download,
+        OSM via osmnx); fully documented and reproducible from raw inputs to final report.
+\end{itemize}
+
+\section*{Education}
+\textbf{B.S. Geophysics} -- University of Washington \hfill \textit{2023} \\
+\textbf{A.S. Physics} -- Edmonds College \hfill \textit{2020}
+
+\section*{Publications}
+Edasi, S.-H. et al. (2026). \textit{Global glacier thickness estimates from a shallow neural network.}
+Journal of Glaciology 72, e28, 1--8. DOI: 10.1017/jog.2026.10123
+
+\end{document}

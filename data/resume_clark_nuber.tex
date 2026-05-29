@@ -1,0 +1,97 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper, top=1cm, bottom=1cm, left=1cm, right=1cm]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{xcolor}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\setlist[itemize]{leftmargin=1.2em, label=--, topsep=0pt, itemsep=0.05em}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{Simon-Hans Edasi}} \\[6pt]
+    simonhansedasi@gmail.com \hfill \textbar \hfill
+    simonhansedasi.github.io \hfill \textbar \hfill
+    linkedin.com/in/simon-hans-edasi
+\end{center}
+
+\section*{Summary}
+Integration-focused technologist with 5+ years bridging operational workflows and technical systems
+in financial and data-intensive environments. Experienced in analyzing manual processes, designing
+automation solutions, and coordinating implementation across functional and technical teams. Builds
+repeatable, well-documented data pipelines and integration architectures with an emphasis on
+governance, auditability, and operational reliability.
+
+\section*{Skills}
+\begin{itemize}
+  \item \textbf{Integration \& Automation:} ERP integration (Microsoft Great Plains, SmartConnect),
+        workflow analysis, process automation, data transformation pipelines, ETL design
+  \item \textbf{Data \& Reporting:} Excel (advanced), Python, SQL, SQLite, pandas, data modeling,
+        financial data prep, repeatable reporting workflows
+  \item \textbf{Architecture \& Governance:} API design, system integration testing, audit logging,
+        policy enforcement, cost governance, multi-system data routing, documentation
+  \item \textbf{Middleware \& Integration Tools:} SmartConnect, REST API integration, multi-system
+        data routing, webhook design, ETL pipeline architecture
+\end{itemize}
+
+\section*{Work Experience}
+
+\textbf{AR Specialist} \hfill \textit{RANDY's} \hfill 2025
+\begin{itemize}
+  \item Served as functional architect for ERP integration workflows -- analyzed manual AR processes,
+        identified automation opportunities, and designed solutions implemented via SmartConnect
+        and Microsoft Great Plains.
+  \item Led user acceptance testing for integration builds; diagnosed data flow failures and
+        coordinated fixes between business operations and the ERP implementation specialist.
+  \item Digitized records management workflows, eliminating paper-based processes and establishing
+        repeatable, auditable data handling procedures.
+  \item Authored shell scripts to automate file organization and records maintenance, reducing
+        recurring manual effort across the AR team.
+  \item Prepared and transformed financial data in Excel for reporting and reconciliation workflows,
+        ensuring accuracy and consistency across billing cycles.
+\end{itemize}
+
+\vspace{0.4em}
+\textbf{Administrative Specialist} \hfill \textit{UW Earth \& Space Sciences} \hfill 2017--2022
+\begin{itemize}
+  \item Reconciled ~150 transactions per week across purchase orders, reimbursements, travel,
+        and grants; verified account coding, tax treatment, and documentation completeness
+        across My Financial Desktop, Workday, and Ariba.
+  \item Built a color-coded Excel reconciliation tracker using conditional formatting to display
+        at-a-glance budget status across all department accounts; automated recurring receipt
+        collection via scheduled email, eliminating manual retrieval of interdepartmental
+        compute charges each billing cycle.
+  \item Maintained departmental financial records; fulfilled audit records requests with full
+        chain-of-custody documentation.
+\end{itemize}
+
+
+\section*{Selected Projects}
+
+\textbf{ai\_glue -- API Governance \& Audit Layer} \hfill \textit{Python, Flask, SQLite}
+\begin{itemize}
+  \item Designed and deployed a policy enforcement layer governing API access across
+        3 production instances; rules cover allowlists, cost caps, rate limits, and
+        PII detection -- all live-reloadable without service interruption.
+  \item Append-only audit log captures every integration event with cost, latency,
+        and project attribution; enables full traceability and cost accountability
+        across teams.
+  \item Automated PII detection flags sensitive data in transit before it reaches
+        external endpoints; enforces data handling policies without manual intervention.
+\end{itemize}
+
+
+
+\section*{Education}
+\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}c@{\extracolsep{\fill}}r@{}}
+  \textbf{Certificate, Data Science} & University of Washington & \textit{2025} \\
+  \textbf{M.S. Earth \& Space Sciences} & University of Washington & \textit{2024} \\
+  \textbf{B.S. Earth \& Space Sciences} & University of Washington & \textit{2019} \\
+\end{tabular*}
+
+
+\end{document}

@@ -1,0 +1,91 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper, top=1cm, bottom=1cm, left=1cm, right=1cm]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\setlist[itemize]{leftmargin=1.2em, label=--, topsep=0pt, itemsep=0.05em}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{Simon-Hans Edasi}} \\[6pt]
+    simonhansedasi@gmail.com \hfill \textbar \hfill
+    simonhansedasi.github.io \hfill \textbar \hfill
+    linkedin.com/in/simon-hans-edasi
+\end{center}
+
+\vspace{0.3cm}
+
+\noindent
+\textbf{Data scientist with an MSc in Geophysical Data Science and experience applying demographic, geospatial, and operational analysis to questions of community access and equity. Built transit vulnerability assessments for Snohomish County, designed library catalog tools integrated with live BiblioCommons data, and developed analytical pipelines that translated complex statistical outputs into actionable prioritization for operational teams. Committed to data-informed practice in service of equitable public access.}
+
+% =========================
+\section*{Technical Skills}
+
+\noindent
+\textbf{Analysis \& Statistics:} Demographic and geospatial analysis, equity gap assessment, regression modeling (OLS, ridge), anomaly detection, uncertainty quantification, cross-validation, ANOVA, time series (ARIMAX, STL), Monte Carlo simulation, TF-IDF
+
+\noindent
+\textbf{Programming \& Data:} Python (pandas, NumPy, matplotlib, statsmodels, scikit-learn, TensorFlow/Keras), SQL/SQLite, Jupyter, Git; Excel (pivot tables, XLOOKUP, VBA macros)
+
+\noindent
+\textbf{Data Infrastructure:} REST APIs (BiblioCommons, Salesforce OAuth/SOQL, Census), Flask, Raspberry Pi deployment, systemd services, Tailscale VPN, GitHub Pages
+
+\noindent
+\textbf{Visualization \& Communication:} Publication-quality figures (matplotlib), poster and oral scientific presentations, written reporting for technical and non-technical audiences
+
+% =========================
+\section*{Experience}
+
+\noindent
+\textbf{Independent Research \& Primary Caregiver} \hfill 2025--Present
+\begin{itemize}
+    \item Mapped transit access gaps in Snohomish County against Census demographic data to produce a vulnerability index prioritizing populations with no alternatives — elderly, low-income, car-free, and limited-English-proficiency households.
+    \item Built a library recommendation engine using TF-IDF and cosine similarity across a 165,000-item catalog; integrated BiblioCommons API for live inventory lookup and hold placement.
+    \item Co-registered satellite imagery, DEM topography, SSURGO soil maps, and climate indices across vineyard plots via Google Earth Engine; trained TensorFlow models relating layered environmental features to vine performance.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent
+\textbf{Accounts Receivable Specialist (Contract)} \hfill Randy's World-Wide \hfill Mar--Aug 2025
+\begin{itemize}
+    \item Recovered and structured years of remittance records stored as raw emails; wrote Python parsers to transform unstructured data into auditable reconciliation datasets.
+    \item Built anomaly detection pipelines to flag mispayments across thousands of weekly transactions: short pays, duplicates, unapplied cash, and remittance mismatches.
+    \item Built a collections prioritization index from dollar exposure, payment irregularity, and aging; used directly by the team to sequence accounts and clear months-old backlogs.
+    \item Rebuilt analytical reports for a non-technical team — converted rate-based anomaly scores into plain-language dollar flags and aging buckets tied to specific actions.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent
+\textbf{Administrative Aide (Finance \& Operations)} \hfill University of Washington \hfill 2017--2022
+\begin{itemize}
+    \item Managed departmental accounts receivable and maintained financial records supporting compliance and audit readiness across a research laboratory environment.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent
+\textbf{Flightline Maintenance Craftsman} \hfill US Air Force \hfill 2008--2014
+\begin{itemize}
+    \item Maintained mission-critical avionics systems under strict regulatory compliance; managed cryptographic security program controlling access to encrypted communication systems.
+\end{itemize}
+
+% =========================
+\section*{Education}
+
+\noindent
+\textbf{Data Science Certificate} \hfill University of Washington \hfill 2025
+
+\vspace{0.1cm}
+\noindent
+\textbf{MSc., Geophysical Data Science} \hfill University of Washington \hfill GPA: 3.7 \hfill 2024
+
+\vspace{0.1cm}
+\noindent
+\textbf{BSc., Earth \& Space Sciences} \hfill University of Washington \hfill GPA: 3.4 \hfill 2019 \\
+\textit{Minors: Mathematical Physics, Estonian}
+
+\end{document}

@@ -1,0 +1,106 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper, top=1cm, bottom=1cm, left=1cm, right=1cm]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\setlist[itemize]{leftmargin=1.2em, label=--, topsep=0pt, itemsep=0.05em}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{Simon-Hans Edasi}} \\[6pt]
+    simonhansedasi@gmail.com \hfill \textbar \hfill
+    simonhansedasi.github.io \hfill \textbar \hfill
+    linkedin.com/in/simon-hans-edasi
+\end{center}
+
+\vspace{0.3cm}
+
+\noindent
+\textbf{Data Scientist with an MSc in Geophysical Data Science and first-author publication in the \textit{Journal of Glaciology}. Builds predictive models, automated pipelines, and agent-based simulations across finance, behavioral research, and environmental science. Background in financial operations and ERP data provides domain fluency for fintech and analytics roles. Proficient in Python, SQL, machine learning frameworks, and statistical modeling.}
+
+% =========================
+\section*{Technical Skills}
+
+\noindent
+\textbf{Machine Learning \& Statistics:} Neural networks (TensorFlow/Keras), scikit-learn, ridge regression, anomaly detection, cross-validation, uncertainty quantification, Monte Carlo simulation, ANOVA, ARIMAX, STL decomposition, OLS regression, TF-IDF
+
+\noindent
+\textbf{Programming \& Data:} Python (pandas, NumPy, matplotlib, seaborn, statsmodels, Flask), SQL/SQLite, Excel (pivot tables, XLOOKUP, VBA macros), Jupyter, Git
+
+\noindent
+\textbf{Financial Systems:} Microsoft Great Plains ERP, SmartConnect, ERP data exports, DSO tracking, aging analysis, invoice reconciliation, payment exception workflows
+
+\noindent
+\textbf{Infrastructure:} Raspberry Pi deployment, systemd services, Tailscale VPN, REST APIs (Salesforce OAuth/SOQL, Twilio, RapidAPI), GitHub Pages
+
+% =========================
+\section*{Experience}
+
+\noindent
+\textbf{Independent Research \& Primary Caregiver} \hfill 2025--Present
+\begin{itemize}
+    \item Published first-author research in \textit{Journal of Glaciology} (2026): trained a neural network on surface attributes from 216,501 glaciers, ran 273 leave-one-out cross-validation models, and quantified three-component uncertainty; found water-terminating glaciers hold volume equivalent to $\sim$6 cm of global sea level rise.
+    \item Built an agent-based sales org simulator calibrated to real Salesforce CRM data via OAuth/SOQL integration; 185-parameter model with 3-step lookahead decision engine; used OLS regression to isolate coefficients for rep behavior efficacy controlling for stage, outcome, and rep archetype.
+    \item Applied STL decomposition and ARIMAX modeling to 130-day longitudinal time series; two-way ANOVA on a separate study identified time-of-day as explaining 76.9\% of variance.
+    \item Designed and deployed a production data collection platform (Flask, SQLite, Raspberry Pi) with mobile-first UI, systemd service management, and remote access via Tailscale VPN.
+    \item Built a content-based recommendation engine using TF-IDF and cosine similarity over a 165,000-item catalog; integrated BiblioCommons API for live inventory and hold placement.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent
+\textbf{Accounts Receivable Specialist (Contract)} \hfill Randy's World-Wide \hfill Mar--Aug 2025
+\begin{itemize}
+    \item Reconciled hundreds to thousands of invoice and payment transactions weekly from Microsoft Great Plains ERP; identified short pays, duplicate payments, unapplied cash, and reconciliation discrepancies.
+    \item Built Python automation pipelines to process and validate transaction data, reducing manual reconciliation work and improving accuracy in payment matching.
+    \item Designed rule-based anomaly detection workflows to flag mismatched invoice amounts, duplicate payments, and inconsistent remittance records.
+    \item Built automated tools to parse semi-structured customer remittance emails, transforming unstructured payment data into structured reconciliation datasets.
+    \item Developed a VBA-driven Excel system to track Days Sales Outstanding (DSO), automatically organizing accounts into aging buckets for collections prioritization.
+    \item Participated in testing and implementation of SmartConnect integrations for mass reconciliation and financial data cleanup.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent
+\textbf{Administrative Aide (Finance \& Operations)} \hfill University of Washington \hfill 2017--2022
+\begin{itemize}
+    \item Managed departmental accounts receivable including invoice generation, distribution, reconciliation, and payment tracking for laboratory services.
+    \item Maintained financial and administrative records supporting reporting, compliance, and audit readiness.
+\end{itemize}
+
+\vspace{0.2cm}
+\noindent
+\textbf{Flightline Maintenance Craftsman} \hfill US Air Force \hfill 2008--2014
+\begin{itemize}
+    \item Maintained and inspected mission-critical avionics systems under strict regulatory compliance; zero tolerance for documentation error.
+    \item Managed cryptographic security program controlling access to encrypted communication systems for secure operations.
+\end{itemize}
+
+% =========================
+\section*{Education}
+
+\noindent
+\textbf{Data Science Certificate} \hfill University of Washington \hfill 2025
+
+\vspace{0.1cm}
+\noindent
+\textbf{MSc., Geophysical Data Science} \hfill University of Washington \hfill GPA: 3.7 \hfill 2024
+
+\vspace{0.1cm}
+\noindent
+\textbf{BSc., Earth \& Space Sciences} \hfill University of Washington \hfill GPA: 3.4 \hfill 2019 \\
+\textit{Minors: Mathematical Physics, Estonian}
+
+% =========================
+\section*{Publications \& Presentations}
+
+\noindent
+\textbf{Edasi, SH., Lipovsky, B.P.} ``Tidewater and lake-terminating glaciers are systematically thicker.'' \textit{Journal of Glaciology} 72, e28, 1--8 (2026). \href{https://doi.org/10.1017/jog.2026.10123}{doi:10.1017/jog.2026.10123}
+
+\noindent
+\textbf{Edasi, SH., Lipovsky, B.P.} ``Can We Estimate Global Ice Volume Using Only Data, i.e., Without Using Physical Models?'' AGU Fall Meeting Abstracts 2022, C52C-0373
+
+\end{document}
