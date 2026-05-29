@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}uncovered — rejection_matrix{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+  <h1>uncovered <span style="color:#6b7280; font-size:14px;">({{ jobs | length }})</span></h1>
+</div>
+
+{% if not jobs %}
+  <p class="dim">No uncovered jobs. Run the pipeline or check back after the daily cron fires.</p>
+{% else %}
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>title</th>
+      <th>company</th>
+      <th>source</th>
+      <th>found</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="job-table">
+  {% for job in jobs %}
+    <tr id="job-{{ job['id'] }}">
+      <td class="dim">{{ job['id'] }}</td>
+      <td>
+        {% if job['url'] %}
+          <a href="{{ job['url'] }}" target="_blank" rel="noopener"
+             style="color:#93c5fd; text-decoration:none;">{{ job['title'] or '' }}</a>
+        {% else %}
+          {{ job['title'] or '' }}
+        {% endif %}
+      </td>
+      <td>{{ job['company'] or '' }}</td>
+      <td><span class="tag">{{ job['source'] or '' }}</span></td>
+      <td class="dim" style="white-space:nowrap; font-size:12px;">{{ (job['run_date'] or '')[:10] }}</td>
+      <td>
+        <button class="secondary" onclick="hideJob({{ job['id'] }}, this)">hide</button>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<script>
+function hideJob(id, btn) {
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch('/uncovered/' + id + '/hide', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        const row = document.getElementById('job-' + id);
+        row.style.transition = 'opacity 0.3s';
+        row.style.opacity = '0';
+        setTimeout(() => row.remove(), 300);
+      }
+    })
+    .catch(() => { btn.disabled = false; btn.textContent = 'hide'; });
+}
+</script>
+{% endblock %}

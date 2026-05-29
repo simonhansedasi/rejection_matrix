@@ -1,0 +1,17 @@
+<h2 style="margin-bottom:10px;">history</h2>
+{% if not logs %}
+  <p class="dim" style="font-size:12px;">no history yet</p>
+{% else %}
+  {% for entry in logs %}
+  <div class="log-entry">
+    <span class="ts">{{ entry['timestamp'][:16] }}</span>
+    {% if entry['field_changed'] %}
+      <span class="change">{{ entry['field_changed'] }}</span>
+      <span class="dim">{{ entry['old_value'] or '—' }} → {{ entry['new_value'] or '—' }}</span>
+      {% if entry['note'] %} — {{ entry['note'] }}{% endif %}
+    {% else %}
+      {{ entry['note'] or '' }}
+    {% endif %}
+  </div>
+  {% endfor %}
+{% endif %}

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}rejection_matrix{% endblock %}</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0f0f1a;
+    color: #d1d5db;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  nav {
+    background: #1a1a2e;
+    border-bottom: 1px solid #2d2d44;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  nav .logo { color: #a78bfa; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; }
+  nav a { color: #9ca3af; text-decoration: none; }
+  nav a:hover, nav a.active { color: #e2e8f0; }
+
+  main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+  h1 { color: #e2e8f0; font-size: 18px; margin-bottom: 20px; }
+  h2 { color: #c4b5fd; font-size: 14px; margin-bottom: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  label { color: #9ca3af; display: inline-block; margin-bottom: 4px; }
+
+  input[type=text], input[type=number], select, textarea {
+    background: #1e1e30;
+    border: 1px solid #374151;
+    color: #e2e8f0;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: 4px;
+    outline: none;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus {
+    border-color: #7c3aed;
+  }
+
+  button, .btn {
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  button:hover, .btn:hover { background: #6d28d9; }
+  button.secondary { background: #374151; }
+  button.secondary:hover { background: #4b5563; }
+  button.saved { background: #166534; cursor: default; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: #1a1a2e;
+    color: #9ca3af;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid #2d2d44;
+    font-weight: normal;
+    white-space: nowrap;
+  }
+  td { padding: 7px 10px; border-bottom: 1px solid #1e1e30; vertical-align: top; }
+  tr:hover td { background: #161625; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  .tag {
+    display: inline-block;
+    background: #1e1e30;
+    border: 1px solid #374151;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #9ca3af;
+  }
+
+  .dim { color: #6b7280; }
+  .mono { font-family: inherit; }
+
+  .form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+
+  .inline-form { background: #1a1a2e; border: 1px solid #2d2d44; padding: 10px 14px; border-radius: 4px; margin-top: 4px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  #status-bar { color: #a78bfa; margin-bottom: 12px; min-height: 20px; }
+
+  .results-table-wrap { overflow-x: auto; }
+
+  .log-row td { background: #111120; padding: 0; }
+  .log-inner { padding: 10px 16px; }
+  .log-entry { color: #9ca3af; padding: 3px 0; border-bottom: 1px solid #1e1e30; font-size: 12px; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry .ts { color: #6b7280; margin-right: 10px; }
+  .log-entry .change { color: #a78bfa; }
+
+  .spinner { display: inline-block; }
+  .spinner::after {
+    content: '';
+    animation: dots 1.2s steps(3, end) infinite;
+  }
+  @keyframes dots {
+    0%   { content: '.'; }
+    33%  { content: '..'; }
+    66%  { content: '...'; }
+  }
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">rejection_matrix</span>
+  <a href="/" {% if request.endpoint == 'index' %}class="active"{% endif %}>search</a>
+  <a href="/applications" {% if request.endpoint == 'applications' %}class="active"{% endif %}>applications</a>
+  <a href="/uncovered" {% if request.endpoint == 'uncovered' %}class="active"{% endif %}>uncovered</a>
+</nav>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

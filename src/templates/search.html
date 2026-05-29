@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}search — rejection_matrix{% endblock %}
+{% block content %}
+
+<form id="search-form" onsubmit="doSearch(event)">
+  <div class="form-row">
+    <div class="form-group" style="flex: 1; min-width: 200px;">
+      <label>keywords</label>
+      <input type="text" name="q" id="q" placeholder="data scientist, geospatial analyst..." style="width:100%">
+    </div>
+    <div class="form-group">
+      <label>salary min</label>
+      <input type="number" name="salary_min" id="salary_min" placeholder="90000" style="width:110px">
+    </div>
+    <div class="form-group" style="justify-content: flex-end;">
+      <button type="submit">search</button>
+    </div>
+  </div>
+
+  <div class="form-row" style="margin-bottom: 20px;">
+    <div class="form-group">
+      <label>work type</label>
+      <div style="display:flex; gap:14px; padding-top:4px;">
+        <label><input type="checkbox" name="remote" id="remote" checked> remote</label>
+        <label><input type="checkbox" name="hybrid" id="hybrid"> hybrid</label>
+        <label><input type="checkbox" name="onsite" id="onsite"> onsite</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>sources</label>
+      <div style="display:flex; gap:14px; padding-top:4px; flex-wrap:wrap;">
+        <label><input type="checkbox" name="sources" value="remotive" checked> Remotive</label>
+        <label><input type="checkbox" name="sources" value="wwr" checked> WWR</label>
+        <label><input type="checkbox" name="sources" value="muse" checked> The Muse</label>
+        <label><input type="checkbox" name="sources" value="jsearch" checked> LinkedIn/Indeed</label>
+        <label><input type="checkbox" name="sources" value="usajobs" checked> USAJOBS</label>
+        <label><input type="checkbox" name="sources" value="noaa" checked> NOAA</label>
+        <label><input type="checkbox" name="sources" value="nasa" checked> NASA</label>
+        <label><input type="checkbox" name="sources" value="usgs" checked> USGS</label>
+        <label><input type="checkbox" name="sources" value="salesforce" checked> Salesforce</label>
+        <label><input type="checkbox" name="sources" value="ramp" checked> Ramp</label>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div id="status-bar"></div>
+
+<div class="results-table-wrap" id="results-wrap" style="display:none;">
+  <table id="results-table">
+    <thead>
+      <tr>
+        <th>title</th>
+        <th>company</th>
+        <th>location</th>
+        <th>type</th>
+        <th>salary</th>
+        <th>source</th>
+        <th>posted</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="results-body"></tbody>
+  </table>
+</div>
+
+<div id="result-count" style="color:#6b7280; margin-top:10px; font-size:12px;"></div>
+
+<script>
+const VARIANTS = {{ variants | tojson }};
+
+let currentES = null;
+let resultCount = 0;
+
+function doSearch(e) {
+  e.preventDefault();
+  const q = document.getElementById('q').value.trim();
+  if (!q) return;
+
+  // Build query string
+  const params = new URLSearchParams();
+  params.set('q', q);
+  const salMin = document.getElementById('salary_min').value;
+  if (salMin) params.set('salary_min', salMin);
+
+  const remote = document.getElementById('remote').checked;
+  const hybrid = document.getElementById('hybrid').checked;
+  const onsite = document.getElementById('onsite').checked;
+  if (remote) params.set('remote', '1');
+  if (hybrid) params.set('hybrid', '1');
+  if (onsite) params.set('onsite', '1');
+
+  const srcChecked = Array.from(document.querySelectorAll('input[name="sources"]:checked'))
+    .map(el => el.value);
+  if (srcChecked.length) params.set('sources', srcChecked.join(','));
+
+  // Reset UI
+  document.getElementById('results-body').innerHTML = '';
+  document.getElementById('results-wrap').style.display = '';
+  document.getElementById('result-count').textContent = '';
+  resultCount = 0;
+
+  if (currentES) currentES.close();
+
+  const es = new EventSource('/search/stream?' + params.toString());
+  currentES = es;
+
+  document.getElementById('status-bar').innerHTML = 'Starting<span class="spinner"></span>';
+
+  es.onmessage = function(evt) {
+    const data = JSON.parse(evt.data);
+
+    if (data.event === 'source_start') {
+      document.getElementById('status-bar').innerHTML =
+        'Searching ' + data.source + '<span class="spinner"></span>';
+
+    } else if (data.event === 'results') {
+      appendResults(data.results);
+
+    } else if (data.event === 'source_error') {
+      // silent — server logs it
+
+    } else if (data.event === 'done') {
+      document.getElementById('status-bar').textContent =
+        resultCount === 0 ? 'No results.' : '';
+      document.getElementById('result-count').textContent =
+        resultCount + ' result' + (resultCount === 1 ? '' : 's');
+      es.close();
+    }
+  };
+
+  es.onerror = function() {
+    document.getElementById('status-bar').textContent = 'Search error.';
+    es.close();
+  };
+}
+
+function fmtSalary(lo, hi) {
+  function k(n) { return n >= 1000 ? '$' + Math.round(n / 1000) + 'k' : '$' + n; }
+  if (lo && hi) return k(lo) + '–' + k(hi);
+  if (lo) return k(lo) + '+';
+  if (hi) return 'up to ' + k(hi);
+  return '';
+}
+
+function appendResults(results) {
+  const tbody = document.getElementById('results-body');
+  results.forEach(r => {
+    resultCount++;
+    const tr = document.createElement('tr');
+    tr.dataset.result = JSON.stringify(r);
+
+    const sal = fmtSalary(r.sal_lo, r.sal_hi);
+    const posted = (r.posted || '').slice(0, 10);
+    const url = r.url || '#';
+
+    tr.innerHTML = `
+      <td><a href="${escHtml(url)}" target="_blank" rel="noopener" style="color:#93c5fd; text-decoration:none;">${escHtml(r.title || '')}</a></td>
+      <td>${escHtml(r.company || '')}</td>
+      <td class="dim">${escHtml(r.location || '')}</td>
+      <td><span class="tag">${escHtml(r.type || '')}</span></td>
+      <td style="white-space:nowrap">${escHtml(sal)}</td>
+      <td class="dim" style="font-size:12px;">${escHtml(r.source || '')}</td>
+      <td class="dim" style="font-size:12px;">${escHtml(posted)}</td>
+      <td><button class="secondary" onclick="toggleSave(this)">save</button></td>
+    `;
+    tbody.appendChild(tr);
+
+    // Save form row (hidden)
+    const formRow = document.createElement('tr');
+    formRow.className = 'save-form-row';
+    formRow.style.display = 'none';
+    formRow.innerHTML = `
+      <td colspan="8">
+        <div class="inline-form">
+          <div class="form-group">
+            <label>variant</label>
+            <select class="variant-select">
+              <option value="">—</option>
+              ${VARIANTS.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+          </div>
+          <button onclick="saveResult(this, ${resultCount - 1})">save to tracker</button>
+          <button class="secondary" onclick="cancelSave(this)">cancel</button>
+        </div>
+      </td>
+    `;
+    formRow.dataset.idx = resultCount - 1;
+    tbody.appendChild(formRow);
+  });
+}
+
+function toggleSave(btn) {
+  const tr = btn.closest('tr');
+  const formRow = tr.nextElementSibling;
+  formRow.style.display = formRow.style.display === 'none' ? '' : 'none';
+}
+
+function cancelSave(btn) {
+  btn.closest('.save-form-row').style.display = 'none';
+}
+
+function saveResult(btn, idx) {
+  const formRow = btn.closest('.save-form-row');
+  const resultRow = formRow.previousElementSibling;
+  const r = JSON.parse(resultRow.dataset.result);
+  const variant = formRow.querySelector('.variant-select').value;
+
+  fetch('/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ ...r, variant })
+  }).then(res => res.json()).then(data => {
+    if (data.ok) {
+      const saveBtn = resultRow.querySelector('button');
+      saveBtn.textContent = 'saved';
+      saveBtn.className = 'saved';
+      saveBtn.onclick = null;
+      formRow.style.display = 'none';
+    }
+  }).catch(() => {
+    btn.textContent = 'error';
+  });
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+{% endblock %}

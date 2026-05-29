@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}applications — rejection_matrix{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+  <h1>applications <span style="color:#6b7280; font-size:14px;">({{ apps | length }})</span></h1>
+</div>
+
+{% if not apps %}
+  <p class="dim">No applications yet. Find some jobs on the <a href="/" style="color:#93c5fd;">search</a> page.</p>
+{% else %}
+<div style="overflow-x:auto;">
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>company</th>
+      <th>role</th>
+      <th>date</th>
+      <th>status</th>
+      <th>location</th>
+      <th>salary</th>
+      <th>variant</th>
+      <th>notes</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for app in apps %}
+    <tr id="row-{{ app['id'] }}" style="cursor:pointer;" onclick="toggleExpand({{ app['id'] }}, event)">
+      <td class="dim">{{ app['id'] }}</td>
+      <td>{{ app['company'] or '' }}</td>
+      <td>{{ app['role'] or '' }}</td>
+      <td class="dim" style="white-space:nowrap;">{{ app['date_applied'] or '' }}</td>
+      <td>
+        {% set s = app['status'] or 'applied' %}
+        <span class="badge" style="background: {{ status_css.get(s, '#374151') }};">{{ s }}</span>
+      </td>
+      <td class="dim">{{ app['location'] or '' }}</td>
+      <td style="white-space:nowrap;">
+        {% if app['salary_offer'] %}
+          ${{ '{:,.0f}'.format(app['salary_offer']) }}
+        {% endif %}
+      </td>
+      <td>
+        {% if app['resume_variant'] %}
+          <span class="tag">{{ app['resume_variant'] }}</span>
+        {% endif %}
+      </td>
+      <td class="dim" style="font-size:12px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+        {{ app['notes'] or '' }}
+      </td>
+      <td style="white-space:nowrap;">
+        <span style="color:#6b7280; font-size:11px;">▼ log</span>
+      </td>
+    </tr>
+
+    {# Expand section: log + update form #}
+    <tr id="expand-{{ app['id'] }}" class="log-row" style="display:none;">
+      <td colspan="10">
+        <div class="log-inner">
+          <div style="display:flex; gap:24px; flex-wrap:wrap;">
+
+            {# Update form #}
+            <div style="min-width:280px;">
+              <h2 style="margin-bottom:10px;">update</h2>
+              <form method="POST" action="/applications/{{ app['id'] }}/update" onclick="event.stopPropagation()">
+                <div class="form-group" style="margin-bottom:8px;">
+                  <label>status</label>
+                  <select name="status">
+                    {% for st in statuses %}
+                      <option value="{{ st }}" {% if st == app['status'] %}selected{% endif %}>{{ st }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:8px;">
+                  <label>variant</label>
+                  <select name="variant">
+                    <option value="">—</option>
+                    {% for v in variants %}
+                      <option value="{{ v }}" {% if v == app['resume_variant'] %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                  <label>note</label>
+                  <input type="text" name="note" placeholder="what happened?" style="width:250px;">
+                </div>
+                <button type="submit">log update</button>
+              </form>
+            </div>
+
+            {# Audit log #}
+            <div style="flex:1; min-width:260px;" id="log-{{ app['id'] }}">
+              <h2 style="margin-bottom:10px;">history</h2>
+              <p class="dim" style="font-size:12px;">loading<span class="spinner"></span></p>
+            </div>
+
+          </div>
+        </div>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<script>
+function toggleExpand(id, e) {
+  if (e && e.target.tagName === 'INPUT') return;
+  const row = document.getElementById('expand-' + id);
+  const isHidden = row.style.display === 'none';
+  row.style.display = isHidden ? '' : 'none';
+  if (isHidden) loadLog(id);
+}
+
+function loadLog(id) {
+  const container = document.getElementById('log-' + id);
+  if (container.dataset.loaded) return;
+  container.dataset.loaded = '1';
+
+  fetch('/applications/' + id + '/log')
+    .then(r => r.text())
+    .then(html => { container.innerHTML = html; })
+    .catch(() => { container.innerHTML = '<p class="dim">could not load log</p>'; });
+}
+</script>
+{% endblock %}
