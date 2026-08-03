@@ -8,18 +8,80 @@ import sys, os, sqlite3, json, urllib.request
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(__file__))
-from search import source_remotive, source_wwr, source_muse, source_ramp
+from search import (source_remotive, source_wwr, source_muse, source_usajobs,
+                    source_noaa, source_nasa, source_usgs,
+                    source_epa, source_usda, source_nps)
+
+
+def _load_env():
+    env_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '.env'))
+    if not os.path.exists(env_path):
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            k, _, v = line.partition('=')
+            os.environ.setdefault(k.strip(), v.strip())
+
+_load_env()
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'applications.db')
 
-SEARCH_KEYWORDS = ["integration"]
+# Multiple keyword passes — each set is searched independently across all sources.
+# Results are deduped by (title, company) within search_jobs before title filtering.
+SEARCH_KEYWORD_SETS = [
+    ["geospatial"],
+    ["remote", "sensing"],
+    ["spatial"],
+    ["scientist"],
+    ["data"],
+    ["forward", "deployed"],
+    ["applied", "ai", "engineer"],
+    ["deployment", "engineer"],
+]
 
 TITLE_KEYWORDS = [
-    "solutions architect", "integration architect", "systems integrator",
-    "integration engineer", "integration specialist", "integration manager",
-    "business systems", "process automation", "erp integration",
-    "business analyst", "systems analyst", "workflow automation",
-    "integration", "architect",
+    # Geospatial / remote sensing / spatial
+    "remote sensing", "geospatial", "spatial analyst", "spatial data",
+    "gis analyst", "gis specialist", "gis scientist", "gis developer", "gis engineer",
+    "earth observation", "land use analyst", "cartographer",
+    # Research / environmental / physical scientist
+    "research scientist", "applied scientist", "physical scientist",
+    "environmental scientist", "climate scientist", "ecologist",
+    "natural resource", "conservation scientist",
+    # Data science / engineering
+    "data scientist", "data engineer", "analytics engineer", "geospatial engineer",
+    # Analyst (qualified — specific prefixes only)
+    "research analyst", "data analyst", "environmental analyst",
+    "climate analyst", "geospatial analyst", "remote sensing analyst",
+    "conservation analyst", "spatial analyst", "policy analyst",
+    # Forward Deployed Engineer / applied AI implementation
+    "forward deployed", "applied ai engineer", "deployment engineer",
+    "implementation engineer", "solutions engineer", "deployment strategist",
+]
+
+NEGATIVE_TITLE_KEYWORDS = [
+    "senior", "sr.", "lead", "principal", "staff", "director",
+    "manager", "head of", "vp ", "vice president", "chief",
+]
+
+# Source specs: (fn, non-keyword args tuple, kwargs dict)
+# Keywords are prepended per-pass in search_jobs().
+SOURCE_SPECS = [
+    (source_remotive, (0, 999999, 50),                {}),
+    (source_wwr,      (0, 999999),                    {}),
+    (source_muse,     (None, 0, 999999, 50),           {}),
+    (source_usajobs,  ('Seattle, WA', 0, 999999, 100), {'radius': 100}),
+    (source_usajobs,  (None, 0, 999999, 100),          {'remote_only': True, 'source_label': 'USAJOBS-Remote'}),
+    # Gov science agencies — prime targets for research/geospatial roles
+    (source_noaa,     (None, 0, 999999, 100),          {'remote_only': True}),
+    (source_nasa,     (None, 0, 999999, 100),          {'remote_only': True}),
+    (source_usgs,     ('Seattle, WA', 0, 999999, 100), {'radius': 200}),
+    (source_epa,      ('Seattle, WA', 0, 999999, 100), {'radius': 200}),
+    (source_usda,     ('Seattle, WA', 0, 999999, 100), {'radius': 200}),
+    (source_nps,      ('Seattle, WA', 0, 999999, 100), {'radius': 200}),
 ]
 
 NTFY_TOPIC = "simonhans-job-alerts"
@@ -46,17 +108,19 @@ def setup_table(conn):
 
 
 def search_jobs():
+    seen = set()
     results = []
-    for fn, args in [
-        (source_remotive, (SEARCH_KEYWORDS, 0, 999999, 50)),
-        (source_wwr,      (SEARCH_KEYWORDS, 0, 999999)),
-        (source_muse,     (SEARCH_KEYWORDS, None, 0, 999999, 50)),
-        (source_ramp,     (SEARCH_KEYWORDS, 0, 999999, 100)),
-    ]:
-        try:
-            results.extend(fn(*args))
-        except Exception as e:
-            print(f"  source failed: {e}")
+    for keywords in SEARCH_KEYWORD_SETS:
+        for fn, args, kwargs in SOURCE_SPECS:
+            try:
+                for j in fn(keywords, *args, **kwargs):
+                    key = ((j.get('title') or '').lower().strip(),
+                           (j.get('company') or '').lower().strip())
+                    if key not in seen:
+                        seen.add(key)
+                        results.append(j)
+            except Exception as e:
+                print(f"  source failed ({fn.__name__}, {keywords}): {e}")
     print(f"search: {len(results)} raw results")
     return results
 
@@ -80,6 +144,7 @@ def filter_results(results):
     filtered = [
         j for j in results
         if any(k in (j.get('title') or '').lower() for k in TITLE_KEYWORDS)
+        and not any(k in (j.get('title') or '').lower() for k in NEGATIVE_TITLE_KEYWORDS)
     ]
     print(f"filter: {len(results)} in, {len(filtered)} after title filter")
     return filtered
@@ -102,7 +167,7 @@ def notify(count):
     if count == 0:
         print("notify: nothing new, skipping")
         return
-    msg = f"{count} new job listings — check rejection_matrix"
+    msg = f"{count} new listings (geospatial/research/scientist/FDE) — check rejection_matrix"
     req = urllib.request.Request(
         f"https://ntfy.sh/{NTFY_TOPIC}",
         data=msg.encode(),

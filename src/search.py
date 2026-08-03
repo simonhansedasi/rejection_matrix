@@ -551,6 +551,27 @@ def source_usgs(keywords, location_city, salary_min, salary_max, limit, remote_o
                           source_label='USGS')
 
 
+def source_epa(keywords, location_city, salary_min, salary_max, limit, remote_only=False, radius=50):
+    return source_usajobs(keywords, location_city, salary_min, salary_max, limit,
+                          remote_only=remote_only, radius=radius,
+                          org_filter='Environmental Protection',
+                          source_label='EPA')
+
+
+def source_usda(keywords, location_city, salary_min, salary_max, limit, remote_only=False, radius=50):
+    return source_usajobs(keywords, location_city, salary_min, salary_max, limit,
+                          remote_only=remote_only, radius=radius,
+                          org_filter='Agriculture',
+                          source_label='USDA')
+
+
+def source_nps(keywords, location_city, salary_min, salary_max, limit, remote_only=False, radius=50):
+    return source_usajobs(keywords, location_city, salary_min, salary_max, limit,
+                          remote_only=remote_only, radius=radius,
+                          org_filter='National Park Service',
+                          source_label='NPS')
+
+
 def _deslug(slug):
     """Convert URL slug like 'senior-data-scientist' → 'Senior Data Scientist'."""
     return ' '.join(w.capitalize() for w in slug.split('-'))
