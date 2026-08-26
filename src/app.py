@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, Response, redirect, url_for
 sys.path.insert(0, os.path.dirname(__file__))
 import search as search_mod
 from rm import get_db
+from draft import draft_package
 
 app = Flask(__name__)
 
@@ -198,7 +199,8 @@ def update_app(app_id):
 def uncovered():
     with get_db() as db:
         jobs = db.execute(
-            "SELECT * FROM weekly_search_results WHERE hidden = 0 ORDER BY run_date DESC"
+            "SELECT * FROM weekly_search_results WHERE hidden = 0 "
+            "ORDER BY (fit_score IS NULL), fit_score DESC, run_date DESC"
         ).fetchall()
     return render_template('uncovered.html', jobs=jobs)
 
@@ -208,6 +210,17 @@ def hide_job(job_id):
     with get_db() as db:
         db.execute("UPDATE weekly_search_results SET hidden = 1 WHERE id = ?", (job_id,))
     return {'ok': True}
+
+
+@app.route('/uncovered/<int:job_id>/draft', methods=['POST'])
+def draft_job(job_id):
+    try:
+        paths = draft_package(job_id)
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
+    if not paths:
+        return {'ok': False, 'error': 'no such job or draft failed'}, 404
+    return {'ok': True, 'paths': {k: os.path.relpath(v, os.path.join(os.path.dirname(__file__), '..')) for k, v in paths.items()}}
 
 
 @app.route('/applications/<int:app_id>/log')

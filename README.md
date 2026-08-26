@@ -1,13 +1,23 @@
 # rejection_matrix
 
-Two CLI tools + a Flask web UI + a daily pipeline that surfaces new listings automatically.
+Two CLI tools + a Flask web UI + a daily pipeline that surfaces, scores, and (on request) drafts application packages for new listings.
 
 - **`src/search.py`** — search job boards for listings by title, salary, location, work type, industry, and company
 - **`src/rm.py`** — track applications you've submitted, log updates, and view status
-- **`src/app.py`** — web UI on port 5004; search page streams results live, applications page shows the full tracker, Uncovered tab shows pipeline-surfaced jobs
-- **`src/pipeline.py`** — daily cron script; searches broad keyword across sources (including FDE terms: forward deployed, applied AI engineer, deployment/implementation/solutions engineer, added 2026-07-14), dedupes, title-filters, writes survivors to `weekly_search_results`, notifies via ntfy.sh
+- **`src/app.py`** — web UI on port 5004; search page streams results live, applications page shows the full tracker, Uncovered tab shows pipeline-surfaced jobs with LLM fit scores and a Draft button
+- **`src/pipeline.py`** — daily cron script; searches broad keyword across sources (Remotive, WWR, The Muse only as of 2026-08-25 — federal sources removed, see below), dedupes, title-filters, writes survivors to `weekly_search_results`, scores every survivor (`src/score.py`), notifies via ntfy.sh
+- **`src/score.py`** (added 2026-08-25) — LLM fit-scoring pass over pending `weekly_search_results` rows; writes `fit_score`/`fit_rationale`/`strategy_flag`, auto-hides anything flagged `federal_exclude` or `dealbreaker`
+- **`src/draft.py`** (added 2026-08-25) — on-demand (never automatic) first-pass package drafting for one listing: JD coverage table, adapted resume, cover-letter scaffold. Writes `data/*_DRAFT.{md,tex}` — never overwrites a real submission file. Triggered by the Draft button on `/uncovered` or `python3 src/draft.py <id>` directly.
 
-The CLI tools have no dependencies beyond Python 3.6+ stdlib. The web UI requires `flask`. The SQLite database lives at `data/applications.db`.
+The CLI tools (`search.py`, `rm.py`) have no dependencies beyond Python 3.6+ stdlib. The web UI and pipeline now require the full `requirements.txt` (`flask`, `anthropic==0.115.1`, `sentence-transformers`, `numpy`) — `score.py`/`draft.py` call the Anthropic API, and `draft.py` reuses `rag_bullets.py`'s embedding retrieval. The SQLite database lives at `data/applications.db`.
+
+## Human approval gate — what's automatic vs. manual
+
+Automatic (05:00 daily cron, no action needed): sourcing, filtering, LLM scoring, auto-hiding federal/dealbreaker listings. This is the only thing that triggers the `ntfy.sh` "new listings" notification.
+
+Manual only (nothing fires without you): drafting a package. No notification exists for "a package was drafted" because nothing drafts one without you clicking Draft first — see `CONTEXT.md` if that gap ever needs closing.
+
+Manual and unchanged: actual portal submission and `rm.py` logging. This pipeline deliberately does not autofill forms or auto-submit — see `CONTEXT.md`'s 2026-08-25 session for why.
 
 ## Working on the go
 
@@ -31,10 +41,30 @@ python3 src/app.py
 On the Pi it runs as a systemd service (`rejection-matrix.service`). To redeploy:
 
 ```bash
-rsync -av --exclude='__pycache__' --exclude='*.pyc' --exclude='venv' \
+rsync -av --exclude='__pycache__' --exclude='*.pyc' --exclude='venv' --exclude='.env' \
+  --exclude='data/applications.db' --exclude='data/applications.db.bak-*' --exclude='.git' \
   /home/simonhans/coding/rejection_matrix/ simonhans@raspberrypi:~/coding/rejection_matrix/
-ssh simonhans@raspberrypi "sudo systemctl restart rejection-matrix"
+ssh simonhans@raspberrypi "cd ~/coding/rejection_matrix && venv/bin/pip install -r requirements.txt && sudo systemctl restart rejection-matrix"
 ```
+
+**The Pi's `.env` is never actually read — the systemd unit is the real source of truth for env vars, and `.env` is excluded from the rsync above on purpose.** `rejection-matrix.service` hardcodes each secret as its own `Environment="KEY=VALUE"` line (no `EnvironmentFile=` directive, no `python-dotenv` in `requirements.txt`, no `load_dotenv()` anywhere in the code). Adding a key to `.env` alone does nothing on the Pi. To add or change one, edit the unit directly:
+```bash
+ssh simonhans@raspberrypi "sudo sed -i '/^\[Install\]/i Environment=\"NEW_KEY=value\"' /etc/systemd/system/rejection-matrix.service && sudo systemctl daemon-reload && sudo systemctl restart rejection-matrix"
+```
+Verify a key actually landed in the running process (not just the unit file):
+```bash
+ssh simonhans@raspberrypi "PID=\$(pgrep -o -f 'rejection_matrix/src/app.py'); sudo cat /proc/\$PID/environ | tr '\0' '\n' | grep KEY_NAME"
+```
+(Bit us 2026-08-26: `ANTHROPIC_API_KEY`/`ANTHROPIC_BASE_URL` were added to `.env` for `draft.py`/`score.py` but never to the unit, so the Pi kept 404ing draft requests with "Set ANTHROPIC_API_KEY... in .env" — the `.env` file itself was a red herring, since nothing on the Pi has ever read it.)
+
+**`applications.db` is Pi-authoritative — never rsync it without excluding it explicitly**, and never rsync `.git` (loose objects are harmless but overwriting `refs/heads/main`/`refs/remotes/origin/main` is not, if the Pi's repo ever diverges from sbook's).
+
+**First deploy after adding `score.py`/`draft.py` needs one manual step**: the new `fit_score`/`fit_rationale`/`strategy_flag`/`drafted` columns are added by `pipeline.py`'s `setup_table()`, which only runs as part of the daily cron — so a fresh deploy will 500 on `/uncovered` until either the cron fires once or you trigger the migration directly:
+```bash
+ssh simonhans@raspberrypi "cd ~/coding/rejection_matrix/src && ../venv/bin/python -c \"import sqlite3, pipeline; conn = sqlite3.connect(pipeline.DB_PATH); pipeline.setup_table(conn)\""
+```
+
+**Flask startup takes ~40s** on the Pi now (torch/sentence-transformers import), not the near-instant startup of the old flask-only app — don't curl-check right after a restart without waiting.
 
 ## CLI
 

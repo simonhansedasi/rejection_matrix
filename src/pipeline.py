@@ -8,9 +8,8 @@ import sys, os, sqlite3, json, urllib.request
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(__file__))
-from search import (source_remotive, source_wwr, source_muse, source_usajobs,
-                    source_noaa, source_nasa, source_usgs,
-                    source_epa, source_usda, source_nps)
+from search import source_remotive, source_wwr, source_muse
+from score import score_pending
 
 
 def _load_env():
@@ -69,19 +68,13 @@ NEGATIVE_TITLE_KEYWORDS = [
 
 # Source specs: (fn, non-keyword args tuple, kwargs dict)
 # Keywords are prepended per-pass in search_jobs().
+# Federal sources (USAJOBS, NOAA, NASA, USGS, EPA, USDA, NPS) removed 2026-08-25 --
+# off-strategy since federal government was excluded 2026-07-28. The score.py LLM
+# pass is the backstop for any federal listing that surfaces via another source.
 SOURCE_SPECS = [
     (source_remotive, (0, 999999, 50),                {}),
     (source_wwr,      (0, 999999),                    {}),
     (source_muse,     (None, 0, 999999, 50),           {}),
-    (source_usajobs,  ('Seattle, WA', 0, 999999, 100), {'radius': 100}),
-    (source_usajobs,  (None, 0, 999999, 100),          {'remote_only': True, 'source_label': 'USAJOBS-Remote'}),
-    # Gov science agencies — prime targets for research/geospatial roles
-    (source_noaa,     (None, 0, 999999, 100),          {'remote_only': True}),
-    (source_nasa,     (None, 0, 999999, 100),          {'remote_only': True}),
-    (source_usgs,     ('Seattle, WA', 0, 999999, 100), {'radius': 200}),
-    (source_epa,      ('Seattle, WA', 0, 999999, 100), {'radius': 200}),
-    (source_usda,     ('Seattle, WA', 0, 999999, 100), {'radius': 200}),
-    (source_nps,      ('Seattle, WA', 0, 999999, 100), {'radius': 200}),
 ]
 
 NTFY_TOPIC = "simonhans-job-alerts"
@@ -100,10 +93,17 @@ def setup_table(conn):
             raw_json TEXT
         )
     """)
-    try:
-        conn.execute("ALTER TABLE weekly_search_results ADD COLUMN hidden INTEGER DEFAULT 0")
-    except Exception:
-        pass  # column already exists
+    for ddl in [
+        "ALTER TABLE weekly_search_results ADD COLUMN hidden INTEGER DEFAULT 0",
+        "ALTER TABLE weekly_search_results ADD COLUMN fit_score REAL",
+        "ALTER TABLE weekly_search_results ADD COLUMN fit_rationale TEXT",
+        "ALTER TABLE weekly_search_results ADD COLUMN strategy_flag TEXT",
+        "ALTER TABLE weekly_search_results ADD COLUMN drafted INTEGER DEFAULT 0",
+    ]:
+        try:
+            conn.execute(ddl)
+        except Exception:
+            pass  # column already exists
     conn.commit()
 
 
@@ -182,11 +182,16 @@ def notify(count):
 
 def run():
     conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     setup_table(conn)
     results = search_jobs()
     results = deduplicate(results, conn)
     results = filter_results(results)
     count   = write_to_db(results, conn)
+    try:
+        score_pending(conn)
+    except Exception as e:
+        print(f"scoring pass failed (non-fatal): {e}")
     conn.close()
     notify(count)
 

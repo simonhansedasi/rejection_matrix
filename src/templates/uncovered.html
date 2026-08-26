@@ -14,6 +14,7 @@
   <thead>
     <tr>
       <th>#</th>
+      <th>score</th>
       <th>title</th>
       <th>company</th>
       <th>source</th>
@@ -25,6 +26,13 @@
   {% for job in jobs %}
     <tr id="job-{{ job['id'] }}">
       <td class="dim">{{ job['id'] }}</td>
+      <td style="white-space:nowrap;" title="{{ job['fit_rationale'] or '' }}">
+        {% if job['fit_score'] is not none %}
+          {{ '%d' % job['fit_score'] }}
+        {% else %}
+          <span class="dim">--</span>
+        {% endif %}
+      </td>
       <td>
         {% if job['url'] %}
           <a href="{{ job['url'] }}" target="_blank" rel="noopener"
@@ -36,7 +44,8 @@
       <td>{{ job['company'] or '' }}</td>
       <td><span class="tag">{{ job['source'] or '' }}</span></td>
       <td class="dim" style="white-space:nowrap; font-size:12px;">{{ (job['run_date'] or '')[:10] }}</td>
-      <td>
+      <td style="white-space:nowrap;">
+        <button class="secondary" onclick="draftJob({{ job['id'] }}, this)">{{ 'redraft' if job['drafted'] else 'draft' }}</button>
         <button class="secondary" onclick="hideJob({{ job['id'] }}, this)">hide</button>
       </td>
     </tr>
@@ -61,6 +70,25 @@ function hideJob(id, btn) {
       }
     })
     .catch(() => { btn.disabled = false; btn.textContent = 'hide'; });
+}
+
+function draftJob(id, btn) {
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = 'drafting...';
+  fetch('/uncovered/' + id + '/draft', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      if (data.ok) {
+        btn.textContent = 'redraft';
+        alert('Drafted:\n' + Object.values(data.paths).join('\n'));
+      } else {
+        btn.textContent = original;
+        alert('Draft failed: ' + data.error);
+      }
+    })
+    .catch(() => { btn.disabled = false; btn.textContent = original; });
 }
 </script>
 {% endblock %}
