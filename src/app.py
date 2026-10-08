@@ -6,8 +6,13 @@ sys.path.insert(0, os.path.dirname(__file__))
 import search as search_mod
 from rm import get_db
 from draft import draft_package
+from score import score_capability
+from pipeline import setup_table
 
 app = Flask(__name__)
+
+with get_db() as _db:
+    setup_table(_db)
 
 STATUSES = ['applied', 'interviewing', 'offer', 'rejected', 'ghosted', 'dead', 'scam']
 
@@ -221,6 +226,16 @@ def draft_job(job_id):
     if not paths:
         return {'ok': False, 'error': 'no such job or draft failed'}, 404
     return {'ok': True, 'paths': {k: os.path.relpath(v, os.path.join(os.path.dirname(__file__), '..')) for k, v in paths.items()}}
+
+
+@app.route('/uncovered/<int:job_id>/capability_score', methods=['POST'])
+def capability_score_job(job_id):
+    try:
+        with get_db() as db:
+            result = score_capability(db, job_id)
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
+    return {'ok': True, 'score': result.get('capability_score'), 'rationale': result.get('rationale')}
 
 
 @app.route('/applications/<int:app_id>/log')

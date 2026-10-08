@@ -1,0 +1,4 @@
+flask
+anthropic==0.115.1
+sentence-transformers
+numpy

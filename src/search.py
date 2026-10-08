@@ -13,6 +13,9 @@ Job boards searched:
   USAJOBS          https://www.usajobs.gov        — US federal jobs (NPS, USGS, NOAA, etc.);
                                                    requires USAJOBS_API_KEY + USAJOBS_EMAIL env vars
   Salesforce       https://careers.salesforce.com — scraped; no key needed; keyword-filtered
+  GovernmentJobs   https://www.governmentjobs.com — scraped; WA state/county/city civic postings
+                                                   (King County, Snohomish County, City of Seattle,
+                                                   City of Lynnwood, Pierce County, State of WA)
 
 JSearch is included automatically when JSEARCH_API_KEY is set; skipped otherwise.
 Get a free key (200 req/month) at: https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch
@@ -42,11 +45,13 @@ Examples:
 """
 
 import argparse
+import html
 import json
 import os
 import re
 import sqlite3
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -63,15 +68,34 @@ YELLOW = '\033[33m'
 CYAN   = '\033[36m'
 RED    = '\033[31m'
 
-ALL_SOURCES = ['remotive', 'wwr', 'muse', 'jsearch', 'usajobs', 'noaa', 'nasa', 'usgs', 'salesforce', 'ramp']
+ALL_SOURCES = ['remotive', 'wwr', 'muse', 'jsearch', 'usajobs', 'noaa', 'nasa', 'usgs', 'salesforce', 'ramp', 'govjobs']
+
+# Same list pipeline.py uses to keep senior-tier postings out of the daily
+# cron feed -- applied here too so ad-hoc CLI searches don't surface roles
+# Simon is unlikely to get past the experience bar for. On by default;
+# --include-senior turns it off.
+NEGATIVE_TITLE_KEYWORDS = [
+    "senior", "sr.", "lead", "principal", "staff", "director",
+    "manager", "head of", "vp ", "vice president", "chief",
+]
+
+# --junior keeps only titles that say so explicitly -- most entry-level
+# postings just omit a level word rather than using one, so this is a
+# narrowing filter for "show me only the ones labeled junior/associate",
+# not a way to find every entry-level role.
+JUNIOR_TITLE_KEYWORDS = [
+    "junior", "jr.", "jr ", "associate", "entry level", "entry-level",
+    "early career", "new grad",
+]
 
 
 # ── HTTP helpers ───────────────────────────────────────────────────────────────
 
-def _request(url, timeout=15):
-    req = urllib.request.Request(
-        url, headers={'User-Agent': 'rejection-matrix-search/1.0 (personal job tracker)'}
-    )
+def _request(url, timeout=15, extra_headers=None):
+    headers = {'User-Agent': 'rejection-matrix-search/1.0 (personal job tracker)'}
+    if extra_headers:
+        headers.update(extra_headers)
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode('utf-8', errors='replace')
 
@@ -173,6 +197,17 @@ def keywords_match(title, description, keywords):
     return all(kw.lower() in haystack for kw in keywords)
 
 
+def _strip_html(text):
+    """Plain text from an HTML/entity-laden JD body -- used to keep the real
+    JD description (score.py/draft.py's only real signal) instead of dropping
+    it, which every source used to do even when the API/feed provided it."""
+    if not text:
+        return ''
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = html.unescape(text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
 # ── sources ────────────────────────────────────────────────────────────────────
 
 def source_remotive(keywords, salary_min, salary_max, limit, industry=None):
@@ -202,6 +237,7 @@ def source_remotive(keywords, salary_min, salary_max, limit, industry=None):
                 'url':     j.get('url', ''),
                 'source':  'Remotive',
                 'posted':  (j.get('publication_date') or '')[:10],
+                'description': _strip_html(j.get('description', '')),
             })
         print(f" {len(results)}")
         return results
@@ -239,8 +275,9 @@ def source_wwr(keywords, salary_min, salary_max):
             region  = el(f'{{{ns}}}region') or 'Remote'
             link    = el('link')
             pubdate = el('pubDate')[:16]
+            desc    = _strip_html(el('description'))
 
-            if not keywords_match(title, '', keywords):
+            if not keywords_match(title, desc, keywords):
                 continue
 
             results.append({
@@ -254,6 +291,7 @@ def source_wwr(keywords, salary_min, salary_max):
                 'url':     link,
                 'source':  'WWR',
                 'posted':  pubdate,
+                'description': desc,
             })
         print(f" {len(results)}")
         return results
@@ -387,6 +425,7 @@ def source_jsearch(keywords, location_city, salary_min, salary_max, limit,
                 'url':     apply_url,
                 'source':  publisher,
                 'posted':  (j.get('job_posted_at_datetime_utc') or '')[:10],
+                'description': _strip_html(j.get('job_description', '')),
             })
 
         print(f" {len(results)}")
@@ -496,9 +535,18 @@ def source_usajobs(keywords, location_city, salary_min, salary_max, limit,
                 apply_uris = j.get('ApplyURI', [])
                 url_out    = apply_uris[0] if apply_uris else ''
 
-                wtype = 'remote' if remote_only else infer_work_type(
-                    j.get('PositionTitle', ''), loc
-                )
+                # UserArea.Details.TeleworkEligible is the real field USAJOBS
+                # exposes for this -- title/location text-guessing (infer_work_type)
+                # called this "onsite" for a Suitland, MD posting that is actually
+                # telework-eligible (confirmed live: TeleworkEligible=True,
+                # RemoteIndicator=False -- i.e. hybrid, not onsite).
+                telework = j.get('UserArea', {}).get('Details', {}).get('TeleworkEligible')
+                if remote_only:
+                    wtype = 'remote'
+                elif str(telework).lower() == 'true':
+                    wtype = 'hybrid'
+                else:
+                    wtype = infer_work_type(j.get('PositionTitle', ''), loc)
 
                 results.append({
                     'title':   j.get('PositionTitle', ''),
@@ -570,6 +618,109 @@ def source_nps(keywords, location_city, salary_min, salary_max, limit, remote_on
                           remote_only=remote_only, radius=radius,
                           org_filter='National Park Service',
                           source_label='NPS')
+
+
+
+
+# GovernmentJobs.com (NEOGOV) agency slugs -- confirmed live 2026-09-09 (WA state
+# is not federal, in scope per feedback_check_government_strategy_before_building).
+# Slugs found via site search since they don't match the agency's own name
+# ("kingcounty" not "kingcountywa", "piercecountywa" not "piercecounty" -- no
+# consistent naming rule across agencies, must verify each one before adding).
+GOVJOBS_AGENCIES = {
+    'washington':     'State of Washington',
+    'kingcounty':     'King County',
+    'snohomish':      'Snohomish County',
+    'seattle':        'City of Seattle',
+    'lynnwood':       'City of Lynnwood',
+    'piercecountywa': 'Pierce County',
+    'everettwa':      'City of Everett',
+    'bellevuewa':     'City of Bellevue',
+    'snoisle':        'Sno-Isle Libraries',
+}
+
+
+def source_govjobs(keywords, agencies=None, limit_per_agency=150):
+    """
+    Search GovernmentJobs.com (NEOGOV) career pages for WA state/county/city agencies.
+
+    The listing page itself is a JS shell (Knockout) -- the real HTML fragment
+    comes from an internal AJAX endpoint (found by grepping the page's own JS
+    bundle for it, not from public docs) that needs X-Requested-With to return
+    the fragment instead of the empty shell.
+
+    keywords: if given, passed as the server-side keyword filter (handy for ad
+    hoc CLI use); if empty, fetches ALL current postings per agency and leaves
+    filtering to the caller's own TITLE_KEYWORDS pass -- server-side full-text
+    search here matches on job body text too (confirmed: "data" once matched a
+    Seattle "Communication Specialist" posting with no data content in the
+    title), so it isn't a substitute for that filter, just a courtesy.
+    """
+    print('  GovernmentJobs...', end='', flush=True)
+    keyword = ' '.join(keywords) if keywords else ''
+    agencies = agencies or GOVJOBS_AGENCIES
+
+    item_re  = re.compile(r'<li class="list-item" data-job-id="\d+">(.*?)(?=<li class="list-item"|\Z)', re.S)
+    title_re = re.compile(r'class="item-details-link"[^>]*href="([^"]+)"[^>]*>([^<]*)</a>')
+    meta_re  = re.compile(r'<ul class="list-meta">(.*?)</ul>', re.S)
+    li_re    = re.compile(r'<li>(.*?)</li>', re.S)
+    desc_re  = re.compile(r'<div class="list-entry">(.*?)</div>', re.S)
+    count_re = re.compile(r'id="job-postings-number">(\d+)<')
+
+    results = []
+    for slug, display_name in agencies.items():
+        try:
+            page, total_pages, fetched = 1, 1, 0
+            while page <= total_pages and fetched < limit_per_agency:
+                params = {'agency': slug, 'page': page}
+                if keyword:
+                    params['keyword'] = keyword
+                url = 'https://www.governmentjobs.com/careers/home/index?' + urllib.parse.urlencode(params)
+                body = _request(url, timeout=20, extra_headers={'X-Requested-With': 'XMLHttpRequest'})
+
+                if page == 1:
+                    m = count_re.search(body)
+                    total = int(m.group(1)) if m else 0
+                    total_pages = min(-(-total // 10), -(-limit_per_agency // 10))
+
+                for block in item_re.findall(body):
+                    tm = title_re.search(block)
+                    if not tm or not tm.group(2).strip():
+                        continue
+                    href, title = tm.group(1), html.unescape(tm.group(2)).strip()
+                    meta_m = meta_re.search(block)
+                    meta_items = li_re.findall(meta_m.group(1)) if meta_m else []
+                    location = _strip_html(meta_items[0]) if meta_items else display_name
+                    desc_m = desc_re.search(block)
+                    description = _strip_html(desc_m.group(1)) if desc_m else ''
+
+                    results.append({
+                        'title':   title,
+                        'company': display_name,
+                        'location': location,
+                        'type':    infer_work_type(title, location, description),
+                        'sal_lo':  None,
+                        'sal_hi':  None,
+                        'sal_raw': '',
+                        'url':     f'https://www.governmentjobs.com{href}',
+                        'source':  'GovernmentJobs',
+                        'posted':  '',
+                        'description': description,
+                    })
+                    fetched += 1
+
+                page += 1
+                time.sleep(2)
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                print(f' [{slug} RATE LIMITED]', end='')
+            else:
+                print(f' [{slug} FAILED: HTTP {e.code}]', end='')
+        except Exception as e:
+            print(f' [{slug} FAILED: {e}]', end='')
+
+    print(f' {len(results)}')
+    return results
 
 
 def _deslug(slug):
@@ -862,6 +1013,10 @@ def main():
                         help='Industry/category filter passed to APIs (e.g. fintech, data, marketing)')
     parser.add_argument('--company',    metavar='NAME',
                         help='Filter results to companies whose name contains this string')
+    parser.add_argument('--include-senior', action='store_true',
+                        help='Do not exclude senior/staff/principal/lead/director/manager titles (excluded by default)')
+    parser.add_argument('--junior',     action='store_true',
+                        help='Only show titles explicitly labeled junior/associate/entry-level/early-career/new-grad')
     parser.add_argument('--sources',    default=','.join(ALL_SOURCES), metavar='LIST',
                         help=f"Comma-separated sources: {', '.join(ALL_SOURCES)} (default: all). "
                              f"usajobs requires USAJOBS_API_KEY + USAJOBS_EMAIL env vars.")
@@ -941,6 +1096,18 @@ def main():
 
     if 'ramp' in sources:
         all_results += source_ramp(keywords, args.salary_min, args.salary_max, args.limit)
+
+    if 'govjobs' in sources:
+        all_results += source_govjobs(keywords)
+
+    # Seniority filter — exclude senior-tier titles by default
+    if not args.include_senior:
+        all_results = [r for r in all_results
+                       if not any(neg in r['title'].lower() for neg in NEGATIVE_TITLE_KEYWORDS)]
+
+    if args.junior:
+        all_results = [r for r in all_results
+                       if any(j in r['title'].lower() for j in JUNIOR_TITLE_KEYWORDS)]
 
     # Work-type filter — only apply if at least one flag was passed
     if args.remote or args.hybrid:

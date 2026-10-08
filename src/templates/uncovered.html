@@ -15,6 +15,7 @@
     <tr>
       <th>#</th>
       <th>score</th>
+      <th>fit</th>
       <th>title</th>
       <th>company</th>
       <th>source</th>
@@ -31,6 +32,13 @@
           {{ '%d' % job['fit_score'] }}
         {% else %}
           <span class="dim">--</span>
+        {% endif %}
+      </td>
+      <td id="capability-{{ job['id'] }}" style="white-space:nowrap;" title="{{ job['capability_rationale'] or '' }}">
+        {% if job['capability_score'] is not none %}
+          {{ '%d' % job['capability_score'] }}
+        {% else %}
+          <button class="secondary" onclick="checkCapability({{ job['id'] }}, this)">check fit</button>
         {% endif %}
       </td>
       <td>
@@ -70,6 +78,25 @@ function hideJob(id, btn) {
       }
     })
     .catch(() => { btn.disabled = false; btn.textContent = 'hide'; });
+}
+
+function checkCapability(id, btn) {
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch('/uncovered/' + id + '/capability_score', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      const cell = document.getElementById('capability-' + id);
+      if (data.ok) {
+        cell.textContent = Math.round(data.score);
+        cell.title = data.rationale || '';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'check fit';
+        alert('Capability check failed: ' + data.error);
+      }
+    })
+    .catch(() => { btn.disabled = false; btn.textContent = 'check fit'; });
 }
 
 function draftJob(id, btn) {
