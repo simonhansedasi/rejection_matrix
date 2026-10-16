@@ -33,3 +33,21 @@ why-physics-works-notes.md
 *.tiff
 *.ico
 .env
+
+# Personal application data (private, never commit)
+data/
+searches/
+*.db
+*.db.bak*
+*.log
+JDs.md
+LINKEDIN_*.md
+NEGOTIATION.md
+RECRUITER_OUTREACH.md
+chat_continuation.md
+wellfound_profile.md
+
+# Junk
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
