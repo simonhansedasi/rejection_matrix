@@ -8,6 +8,7 @@ from rm import get_db
 from draft import draft_package
 from score import score_capability
 from pipeline import setup_table
+from add_url import add_job
 
 app = Flask(__name__)
 
@@ -208,6 +209,19 @@ def uncovered():
             "ORDER BY (fit_score IS NULL), fit_score DESC, run_date DESC"
         ).fetchall()
     return render_template('uncovered.html', jobs=jobs)
+
+
+@app.route('/uncovered/add_url', methods=['POST'])
+def add_url():
+    data = request.get_json(silent=True) or {}
+    url = (data.get('url') or '').strip()
+    if not url.startswith(('http://', 'https://')):
+        return {'ok': False, 'error': 'need an http(s) url'}, 400
+    try:
+        with get_db() as db:
+            return add_job(db, url, data.get('text'))
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
 
 
 @app.route('/uncovered/<int:job_id>/hide', methods=['POST'])

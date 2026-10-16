@@ -4,7 +4,7 @@ Daily job search pipeline — runs via cron, writes new listings to weekly_searc
 Skips anything already in job_applications or weekly_search_results.
 """
 
-import sys, os, sqlite3, json, urllib.request
+import sys, os, re, sqlite3, json, urllib.request
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -111,7 +111,27 @@ NEGATIVE_TITLE_KEYWORDS = [
     # 2026-09-02.
     "general interest", "future opportunities", "talent pool",
     "talent community", "expression of interest", "always hiring",
+    # Hard gates Simon can't meet -- student/enrolled-only roles, added 2026-10-14.
+    "co-op", "postdoc", "new grad",
 ]
+# word-boundary, so "International"/"Internal" titles survive
+_STUDENT_TITLE_RE = re.compile(r"\b(intern|internship|ph\.?d)\b", re.I)
+
+# Description gates, added 2026-10-14 after five straight postings failed a hard
+# requirement (7+ yrs, "2 yrs in job offered", PhD enrollment, graduation date).
+# Simon has ~2 yrs of DS-titled experience, so >= GATE_YEARS_MAX is a stretch. Regex is
+# deliberately conservative: a number of years must sit near "experience".
+GATE_YEARS_MAX = 5
+_YEARS_RE = re.compile(r"(\d+)\s*\+?\s*(?:-\s*\d+\s*)?years?\b[^.\n]{0,40}?experience", re.I)
+_ENROLLED_RE = re.compile(
+    r"currently (?:enrolled|pursuing)|must be enrolled|working towards a (?:master|ph)|"
+    r"anticipated graduation|graduating between|years? of experience in (?:the )?job offered", re.I)
+
+
+def fails_description_gate(desc):
+    desc = desc or ""
+    return bool(_ENROLLED_RE.search(desc)
+                or any(int(m.group(1)) >= GATE_YEARS_MAX for m in _YEARS_RE.finditer(desc)))
 
 # Sources confirmed unreliable, not just suspected -- blocked outright rather than
 # scored. "Remote Zest Jobs" (remotezest.up.railway.app, reached via JSearch):
@@ -212,6 +232,10 @@ JSEARCH_DAILY_QUERIES = [
     # "geospatial" query (blending diluted JSearch to 0 results before, see above).
     # 4 queries/day = ~120 req/month, leaves ~80 for manual search.py use.
     ["location intelligence"],
+    # Added 2026-10-12: staffing-firm / contract roles (Insight Global, Robert Half,
+    # Harnham etc. post here). Its own call for the same dilution reason as above.
+    # 5 queries/day = ~150 req/month, leaves ~50 for manual search.py use.
+    ["data scientist contract"],
 ]
 
 
@@ -281,6 +305,8 @@ def filter_results(results):
         and not any(k in (j.get('title') or '').lower() for k in NEGATIVE_TITLE_KEYWORDS)
         and (j.get('source') or '').lower() not in SOURCE_BLOCKLIST
         and (j.get('company') or '').lower() not in COMPANY_BLOCKLIST
+        and not _STUDENT_TITLE_RE.search(j.get('title') or '')
+        and not fails_description_gate(j.get('description'))
         # company == source (case-insensitive) usually means a multi-employer
         # aggregator never extracted the real employer and stuffed its own name
         # into both fields instead -- confirmed junk twice (Remote Zest Jobs,
